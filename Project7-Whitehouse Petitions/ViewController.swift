@@ -8,12 +8,26 @@
 
 import UIKit
 
-class ViewController: UITableViewController {
+// Challenge 2: add Search Bar functionality
+class ViewController: UITableViewController, UISearchBarDelegate, UISearchResultsUpdating {
     
     var petitions = [Petition]()
+    var searchedPetitions = [Petition]()
+    let searchController = UISearchController(searchResultsController: nil)
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        searchController.searchResultsUpdater = self
+        searchController.searchBar.delegate = self
+        searchController.obscuresBackgroundDuringPresentation = false
+        searchController.searchBar.placeholder = "Search Petitions"
+        navigationItem.searchController = searchController
+        self.definesPresentationContext = true
+        
+        title = "Whitehouse Petitions"
+        // Challenge 1 -- add Credits button
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Credits", style: .plain, target: self, action: #selector(creditsAlert))
         
        // let urlString = "https://api.whitehouse.gov/v1/petitions.json?limit=100"
         var urlString = "https://www.hackingwith  swift.com/samples/petitions-1.json"
@@ -31,12 +45,33 @@ class ViewController: UITableViewController {
             {
                 // we're okay to parse
                 parse(json: data)
+                search()
                 return
         }
     }
         
         showError()
 }
+    
+   @objc func creditsAlert() {
+        let ac = UIAlertController(title: nil, message: "This data comes from We The People API of the Whitehouse", preferredStyle: .alert)
+        ac.addAction(UIAlertAction(title: "Ok", style: .default))
+        present(ac, animated: true)
+    }
+    
+    // Search function
+    func search() {
+        
+        guard let searchBarText = searchController.searchBar.text?.lowercased() else { return }
+        
+        if searchBarText.isEmpty {
+            searchedPetitions = petitions
+        } else {
+            searchedPetitions = petitions.filter { $0.title.lowercased().contains(searchBarText) }
+        }
+        tableView.reloadData()
+    }
+    
         
     func parse(json: Data) {
         let decoder = JSONDecoder()
@@ -55,11 +90,11 @@ class ViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return petitions.count
+        return searchedPetitions.count
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let petition = petitions[indexPath.row]
+        let petition = searchedPetitions[indexPath.row]
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
         cell.textLabel?.text = petition.title
         cell.detailTextLabel?.text = petition.body
@@ -68,8 +103,16 @@ class ViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let vc = DetailViewController()
-        vc.detailItem = petitions[indexPath.row]
+        vc.detailItem = searchedPetitions[indexPath.row]
         navigationController?.pushViewController(vc, animated: true)
     }
-}
 
+
+func updateSearchResults(for searchController: UISearchController) {
+        search()
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        search()
+    }
+}
